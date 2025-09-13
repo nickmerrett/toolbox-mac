@@ -1,9 +1,3 @@
-go_build_wrapper_file = files('go-build-wrapper')
-go_build_wrapper_program = find_program('go-build-wrapper')
-
-meson_generate_completions_program = find_program('meson_generate_completions.py')
-meson_go_fmt_program = find_program('meson_go_fmt.py')
-
 # Detect platform first
 cpu_family = host_machine.cpu_family()
 endian = host_machine.endian()
@@ -14,6 +8,18 @@ force_macos_build = get_option('force_macos_build')
 if force_macos_build
   build_system = 'darwin'
 endif
+
+# Platform-specific build wrapper
+if build_system == 'darwin'
+  go_build_wrapper_file = files('go-build-wrapper-darwin')
+  go_build_wrapper_program = find_program('go-build-wrapper-darwin')
+else
+  go_build_wrapper_file = files('go-build-wrapper')
+  go_build_wrapper_program = find_program('go-build-wrapper')
+endif
+
+meson_generate_completions_program = find_program('meson_generate_completions.py')
+meson_go_fmt_program = find_program('meson_go_fmt.py')
 
 # Base sources that work on all platforms
 sources_common = files(
