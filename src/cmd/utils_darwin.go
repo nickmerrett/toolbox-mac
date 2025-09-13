@@ -26,12 +26,10 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/containers/toolbox/pkg/utils"
-	"github.com/spf13/viper"
 )
 
 func askForConfirmation(prompt string) bool {

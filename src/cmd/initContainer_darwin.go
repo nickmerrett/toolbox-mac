@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"path/filepath"
-	"strconv"
 
 	"github.com/containers/toolbox/pkg/utils"
 	"github.com/sirupsen/logrus"

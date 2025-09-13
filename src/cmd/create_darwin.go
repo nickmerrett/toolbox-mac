@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -123,7 +122,7 @@ func create(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := createContainer(container, image, release, createFlags.authFile); err != nil {
+	if err := createContainer(container, image, release, createFlags.authFile, true); err != nil {
 		return err
 	}
 
@@ -294,17 +293,24 @@ func promptForDownload(image string) error {
 func getImageSize(image string) (string, error) {
 	// Try to get image size using skopeo
 	ctx := context.Background()
-	imageSizeInfo, err := skopeo.Inspect(ctx, image, "size")
+	imageSizeInfo, err := skopeo.Inspect(ctx, image)
 	if err != nil {
 		return "", err
 	}
 
-	// Extract size from the skopeo.Image struct
-	if imageSizeInfo.Size == nil {
+	// Calculate total size from all layers
+	var totalSize float64
+	for _, layer := range imageSizeInfo.LayersData {
+		if layerSize, err := layer.Size.Float64(); err == nil {
+			totalSize += layerSize
+		}
+	}
+
+	if totalSize == 0 {
 		return "unknown", nil
 	}
 
-	imageSize := units.HumanSize(float64(*imageSizeInfo.Size))
+	imageSize := units.HumanSize(totalSize)
 	return imageSize, nil
 }
 
