@@ -216,6 +216,12 @@ func createContainerWithMacOSOptions(container, image, release string) error {
 		"--security-opt", "label=disable",
 	)
 
+	// Mount the toolbox binary into the container so init-container can run
+	if executable, err := os.Executable(); err == nil {
+		toolboxMountArg := fmt.Sprintf("%s:/usr/local/bin/toolbox:ro", executable)
+		createArgs = append(createArgs, "--volume", toolboxMountArg)
+	}
+
 	// Add the image
 	createArgs = append(createArgs, image)
 
@@ -228,7 +234,7 @@ func createContainerWithMacOSOptions(container, image, release string) error {
 		"--shell", os.Getenv("SHELL"))
 
 	logrus.Debug("Creating container:")
-	logrus.Debugf("%s %v", "podman", createArgs)
+	logrus.Debugf("Full podman create command: podman %s", strings.Join(createArgs, " "))
 
 	if err := shell.Run("podman", nil, nil, nil, createArgs...); err != nil {
 		return fmt.Errorf("failed to create container %s: %w", container, err)

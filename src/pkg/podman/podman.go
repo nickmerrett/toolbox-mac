@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/HarryMichal/go-version"
@@ -485,6 +486,8 @@ func SetLogLevel(logLevel logrus.Level) {
 func Start(container string, stderr io.Writer) error {
 	logLevelString := LogLevel.String()
 	args := []string{"--log-level", logLevelString, "start", container}
+
+	logrus.Debugf("Full podman start command: podman %s", strings.Join(args, " "))
 
 	if err := shell.Run("podman", nil, nil, stderr, args...); err != nil {
 		return err
