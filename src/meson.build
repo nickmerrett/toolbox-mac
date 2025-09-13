@@ -59,6 +59,7 @@ if build_system == 'darwin'
   sources = sources_common + files(
     'cmd/create_darwin.go',
     'cmd/initContainer_darwin.go', 
+    'cmd/utils_darwin.go',
     'pkg/term/term_darwin.go',
     'pkg/utils/utils_darwin.go',
   )
@@ -66,6 +67,7 @@ else
   sources = sources_common + files(
     'cmd/create.go',
     'cmd/initContainer.go',
+    'cmd/utils.go',
     'pkg/term/term.go',
     'pkg/term/term_test.go',
     'pkg/utils/libsubid-wrappers.c',

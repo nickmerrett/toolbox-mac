@@ -130,7 +130,7 @@ func create(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func createContainer(container, image, release, authFile string) error {
+func createContainer(container, image, release, authFile string, showCommandToEnter bool) error {
 	if container == "" {
 		panic("container not specified")
 	}
@@ -293,13 +293,18 @@ func promptForDownload(image string) error {
 
 func getImageSize(image string) (string, error) {
 	// Try to get image size using skopeo
-	imageSizeFloat64, err := skopeo.Inspect(image, "size")
+	ctx := context.Background()
+	imageSizeInfo, err := skopeo.Inspect(ctx, image, "size")
 	if err != nil {
 		return "", err
 	}
 
-	imageSizeInt64 := int64(imageSizeFloat64)
-	imageSize := units.HumanSize(float64(imageSizeInt64))
+	// Extract size from the skopeo.Image struct
+	if imageSizeInfo.Size == nil {
+		return "unknown", nil
+	}
+
+	imageSize := units.HumanSize(float64(*imageSizeInfo.Size))
 	return imageSize, nil
 }
 
