@@ -27,6 +27,7 @@ if host_system == 'darwin'
   # macOS doesn't have libsubid
   subid_dep = dependency('', required: false)
   message('macOS build: skipping libsubid dependency')
+  message('macOS build: skipping libc.so check (uses dylib instead)')
 else
   # Linux and other Unix systems
   subid_dep = cc.find_library('subid', has_headers: ['shadow/subid.h'])
@@ -101,7 +102,7 @@ if host_system == 'darwin'
     tmpfilesdir = '/usr/local/lib/tmpfiles.d'
   endif
   message('Building for macOS - using alternative tmpfiles directory')
-elif tmpfilesdir == '' or not fs.exists('/run/.containerenv')
+elif tmpfilesdir == ''
   systemd_dep = dependency('systemd')
 
   if tmpfilesdir == ''
