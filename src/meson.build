@@ -4,13 +4,12 @@ go_build_wrapper_program = find_program('go-build-wrapper')
 meson_generate_completions_program = find_program('meson_generate_completions.py')
 meson_go_fmt_program = find_program('meson_go_fmt.py')
 
-sources = files(
+# Base sources that work on all platforms
+sources_common = files(
   'toolbox.go',
   'cmd/completion.go',
-  'cmd/create.go',
   'cmd/enter.go',
   'cmd/help.go',
-  'cmd/initContainer.go',
   'cmd/list.go',
   'cmd/rm.go',
   'cmd/rmi.go',
@@ -28,42 +27,74 @@ sources = files(
   'pkg/shell/shell.go',
   'pkg/shell/shell_test.go',
   'pkg/skopeo/skopeo.go',
-  'pkg/term/term.go',
-  'pkg/term/term_test.go',
-  'pkg/utils/libsubid-wrappers.c',
   'pkg/utils/arch.go',
   'pkg/utils/errors.go',
   'pkg/utils/fedora.go',
   'pkg/utils/rhel.go',
-  'pkg/utils/utils.go',
-  'pkg/utils/utils_cgo.go',
+  'pkg/utils/ubuntu.go',
+  'pkg/utils/utils_common.go',
   'pkg/utils/utils_test.go',
   'pkg/version/version.go',
 )
 
+# Platform-specific sources
+if build_system == 'darwin'
+  sources = sources_common + files(
+    'cmd/create_darwin.go',
+    'cmd/initContainer_darwin.go', 
+    'pkg/term/term_darwin.go',
+    'pkg/utils/utils_darwin.go',
+  )
+else
+  sources = sources_common + files(
+    'cmd/create.go',
+    'cmd/initContainer.go',
+    'pkg/term/term.go',
+    'pkg/term/term_test.go',
+    'pkg/utils/libsubid-wrappers.c',
+    'pkg/utils/utils.go',
+    'pkg/utils/utils_cgo.go',
+  )
+endif
+
 cpu_family = host_machine.cpu_family()
 endian = host_machine.endian()
+build_system = host_machine.system()
+
+# Allow forcing macOS mode via environment variable for testing
+force_macos_build = get_option('force_macos_build')
+if force_macos_build
+  build_system = 'darwin'
+endif
 
 dynamic_linker = ''
-if cpu_family == 'aarch64' and endian == 'little'
-  dynamic_linker = '/lib/ld-linux-aarch64.so.1'
-elif cpu_family == 'arm' and endian == 'little'
-  dynamic_linker = '/lib/ld-linux-armhf.so.3'
-elif cpu_family == 'loongarch64' and endian == 'little'
-  dynamic_linker = '/lib64/ld-linux-loongarch-lp64d.so.1'
-elif cpu_family == 'ppc64' and endian == 'little'
-  dynamic_linker = '/lib64/ld64.so.2'
-elif cpu_family == 's390x' and endian == 'big'
-  dynamic_linker = '/lib/ld64.so.1'
-elif cpu_family == 'x86' and endian == 'little'
-  dynamic_linker = '/lib/ld-linux.so.2'
-elif cpu_family == 'x86_64' and endian == 'little'
-  dynamic_linker = '/lib64/ld-linux-x86-64.so.2'
-elif cpu_family == 'riscv64' and endian == 'little'
-  dynamic_linker = '/lib/ld-linux-riscv64-lp64d.so.1'
+
+if build_system == 'darwin'
+  # macOS uses dyld, not a Linux dynamic linker
+  dynamic_linker = '/usr/lib/dyld'
+  message('macOS build: using dyld dynamic linker')
 else
-  host_machine_description = cpu_family + ' (' + endian + ' endian)'
-  error('Please specify dynamic linker for:', host_machine_description)
+  # Linux and other Unix systems
+  if cpu_family == 'aarch64' and endian == 'little'
+    dynamic_linker = '/lib/ld-linux-aarch64.so.1'
+  elif cpu_family == 'arm' and endian == 'little'
+    dynamic_linker = '/lib/ld-linux-armhf.so.3'
+  elif cpu_family == 'loongarch64' and endian == 'little'
+    dynamic_linker = '/lib64/ld-linux-loongarch-lp64d.so.1'
+  elif cpu_family == 'ppc64' and endian == 'little'
+    dynamic_linker = '/lib64/ld64.so.2'
+  elif cpu_family == 's390x' and endian == 'big'
+    dynamic_linker = '/lib/ld64.so.1'
+  elif cpu_family == 'x86' and endian == 'little'
+    dynamic_linker = '/lib/ld-linux.so.2'
+  elif cpu_family == 'x86_64' and endian == 'little'
+    dynamic_linker = '/lib64/ld-linux-x86-64.so.2'
+  elif cpu_family == 'riscv64' and endian == 'little'
+    dynamic_linker = '/lib/ld-linux-riscv64-lp64d.so.1'
+  else
+    host_machine_description = cpu_family + ' (' + endian + ' endian)'
+    error('Please specify dynamic linker for:', host_machine_description)
+  endif
 endif
 
 message('Host machine dynamic linker:', dynamic_linker)
