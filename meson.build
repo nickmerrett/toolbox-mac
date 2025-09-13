@@ -14,7 +14,16 @@ if not cc.has_argument('-print-file-name=libc.so')
   error('C compiler does not support the -print-file-name argument.')
 endif
 
-subid_dep = cc.find_library('subid', has_headers: ['shadow/subid.h'])
+# Platform-specific dependencies
+host_system = host_machine.system()
+if host_system == 'darwin'
+  # macOS doesn't have libsubid
+  subid_dep = dependency('', required: false)
+  message('Building for macOS - skipping libsubid dependency')
+else
+  # Linux and other Unix systems
+  subid_dep = cc.find_library('subid', has_headers: ['shadow/subid.h'])
+endif
 
 go = find_program('go')
 go_md2man = find_program('go-md2man')
@@ -73,7 +82,14 @@ migration_path_for_coreos_toolbox = get_option('migration_path_for_coreos_toolbo
 profiledir = get_option('profile_dir')
 
 tmpfilesdir = get_option('tmpfiles_dir')
-if tmpfilesdir == '' or not fs.exists('/run/.containerenv')
+if host_system == 'darwin'
+  # macOS doesn't use systemd
+  systemd_dep = dependency('', required: false)
+  if tmpfilesdir == ''
+    tmpfilesdir = '/usr/local/lib/tmpfiles.d'
+  endif
+  message('Building for macOS - using alternative tmpfiles directory')
+elif tmpfilesdir == '' or not fs.exists('/run/.containerenv')
   systemd_dep = dependency('systemd')
 
   if tmpfilesdir == ''
