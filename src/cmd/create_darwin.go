@@ -73,6 +73,8 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.AddCommand(createCmd)
+	
 	flags := createCmd.Flags()
 
 	flags.StringVar(&createFlags.authFile,

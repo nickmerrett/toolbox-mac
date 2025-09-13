@@ -64,6 +64,8 @@ var initContainerCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.AddCommand(initContainerCmd)
+	
 	flags := initContainerCmd.Flags()
 
 	flags.IntVar(&initContainerFlags.gid,
