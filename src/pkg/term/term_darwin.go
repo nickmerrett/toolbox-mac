@@ -1,4 +1,4 @@
-//go:build linux
+//go:build darwin
 
 /*
  * Copyright © 2023 – 2024 Red Hat Inc.
@@ -29,7 +29,8 @@ type Option func(*unix.Termios)
 func GetState(file *os.File) (*unix.Termios, error) {
 	fileFD := file.Fd()
 	fileFDInt := int(fileFD)
-	state, err := unix.IoctlGetTermios(fileFDInt, unix.TCGETS)
+	// On macOS, use TIOCGETA instead of TCGETS
+	state, err := unix.IoctlGetTermios(fileFDInt, unix.TIOCGETA)
 	return state, err
 }
 
@@ -53,7 +54,8 @@ func NewStateFrom(oldState *unix.Termios, options ...Option) *unix.Termios {
 func SetState(file *os.File, state *unix.Termios) error {
 	fileFD := file.Fd()
 	fileFDInt := int(fileFD)
-	err := unix.IoctlSetTermios(fileFDInt, unix.TCSETS, state)
+	// On macOS, use TIOCSETA instead of TCSETS
+	err := unix.IoctlSetTermios(fileFDInt, unix.TIOCSETA, state)
 	return err
 }
 
