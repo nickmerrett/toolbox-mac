@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Copyright © 2020 – 2024 Red Hat Inc.
 #
@@ -35,7 +35,7 @@ if ! cd "$1"; then
 fi
 
 tags=""
-if $7; then
+if [ "$7" = "true" ]; then
     tags="-tags migration_path_for_coreos_toolbox"
 fi
 
@@ -43,13 +43,22 @@ fi
 # macOS uses dylib and dyld, which work differently than Linux
 
 echo "Building for macOS with dyld: $6"
+echo "PWD: $(pwd)"
+echo "Go version: $(go version)"
+echo "Tags: $tags"
+echo "Output: $2/$3"
+echo "Version: $4"
 
 # Simple build for macOS without the Linux-specific linker flags
 # shellcheck disable=SC2086
+echo "Running: go build $tags -trimpath -ldflags \"-X github.com/containers/toolbox/pkg/version.currentVersion=$4\" -o \"$2/$3\""
+
 go build \
         $tags \
         -trimpath \
         -ldflags "-X github.com/containers/toolbox/pkg/version.currentVersion=$4" \
         -o "$2/$3"
+
+echo "Go build exit code: $?"
 
 exit "$?"
