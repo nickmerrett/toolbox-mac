@@ -184,39 +184,36 @@ func createContainerWithMacOSOptions(container, image, release string) error {
 		"--user", "root:root",
 	}
 
-	// macOS-specific volume mounts (simplified from Linux version)
-	// Note: On macOS, containers run in VMs so direct host filesystem access is limited
+	// macOS-specific volume mounts (simplified for compatibility)
+	// Note: On macOS, containers run in VMs so mount options are limited
 	homeDir := os.Getenv("HOME")
 	if homeDir != "" {
-		homeDirMountArg := fmt.Sprintf("%s:%s:rslave", homeDir, homeDir)
+		homeDirMountArg := fmt.Sprintf("%s:%s", homeDir, homeDir)
 		createArgs = append(createArgs, "--volume", homeDirMountArg)
 	}
 
-	// Mount some common macOS directories if they exist
+	// Mount some common macOS directories if they exist (simplified mounts)
 	macOSMounts := []struct {
 		host      string
 		container string
-		options   string
 	}{
-		{"/Users", "/host/Users", "rslave"},
-		{"/opt", "/host/opt", "rslave"},
-		{"/usr/local", "/host/usr/local", "rslave"},
-		{"/tmp", "/host/tmp", "rslave"},
+		{"/Users", "/host/Users"},
+		{"/opt", "/host/opt"},
+		{"/usr/local", "/host/usr/local"},
+		{"/tmp", "/host/tmp"},
 	}
 
 	for _, mount := range macOSMounts {
 		if _, err := os.Stat(mount.host); err == nil {
-			mountArg := fmt.Sprintf("%s:%s:%s", mount.host, mount.container, mount.options)
+			mountArg := fmt.Sprintf("%s:%s", mount.host, mount.container)
 			createArgs = append(createArgs, "--volume", mountArg)
 		}
 	}
 
-	// Security and capability options for macOS
+	// Simplified security options for macOS compatibility
 	createArgs = append(createArgs,
 		"--cap-add", "SYS_PTRACE",
 		"--security-opt", "label=disable",
-		"--ipc", "host",
-		"--pid", "host",
 	)
 
 	// Add the image
