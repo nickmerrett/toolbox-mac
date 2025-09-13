@@ -1,5 +1,3 @@
-//go:build linux
-
 /*
  * Copyright © 2019 – 2025 Red Hat Inc.
  *
@@ -28,16 +26,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/acobaugh/osrelease"
 	"github.com/containers/toolbox/pkg/shell"
 	"github.com/docker/go-units"
-	"github.com/godbus/dbus/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"golang.org/x/sys/unix"
 )
 
 type GetDefaultReleaseFunc func() (string, error)
@@ -209,63 +204,6 @@ func init() {
 	ContainerNameDefault = containerNamePrefixDefault + "-" + releaseDefault
 }
 
-func CallFlatpakSessionHelper() (string, error) {
-	logrus.Debug("Calling org.freedesktop.Flatpak.SessionHelper.RequestSession")
-
-	connection, err := dbus.SessionBus()
-	if err != nil {
-		return "", errors.New("failed to connect to the D-Bus session instance")
-	}
-
-	sessionHelper := connection.Object("org.freedesktop.Flatpak", "/org/freedesktop/Flatpak/SessionHelper")
-	call := sessionHelper.Call("org.freedesktop.Flatpak.SessionHelper.RequestSession", 0)
-
-	var result map[string]dbus.Variant
-	err = call.Store(&result)
-	if err != nil {
-		logrus.Debugf("Call to org.freedesktop.Flatpak.SessionHelper.RequestSession failed: %s", err)
-		return "", errors.New("failed to call org.freedesktop.Flatpak.SessionHelper.RequestSession")
-	}
-
-	pathVariant := result["path"]
-	pathVariantSignature := pathVariant.Signature().String()
-	if pathVariantSignature != "s" {
-		return "", errors.New("unknown reply from org.freedesktop.Flatpak.SessionHelper.RequestSession")
-	}
-
-	pathValue := pathVariant.Value()
-	path := pathValue.(string)
-	return path, nil
-}
-
-func EnsureXdgRuntimeDirIsSet(uid int) {
-	if _, ok := os.LookupEnv("XDG_RUNTIME_DIR"); !ok {
-		logrus.Debug("XDG_RUNTIME_DIR is unset")
-
-		xdgRuntimeDir := fmt.Sprintf("/run/user/%d", uid)
-		os.Setenv("XDG_RUNTIME_DIR", xdgRuntimeDir)
-
-		logrus.Debugf("XDG_RUNTIME_DIR set to %s", xdgRuntimeDir)
-	}
-}
-
-func Flock(path string, how int) (*os.File, error) {
-	file, err := os.Create(path)
-	if err != nil {
-		errs := []error{ErrFlockCreate, err}
-		return nil, &FlockError{Path: path, Errs: errs}
-	}
-
-	fd := file.Fd()
-	fdInt := int(fd)
-	if err := syscall.Flock(fdInt, how); err != nil {
-		errs := []error{ErrFlockAcquire, err}
-		return nil, &FlockError{Path: path, Errs: errs, errSuffix: "on"}
-	}
-
-	return file, nil
-}
-
 func ForwardToHost() (int, error) {
 	envOptions := GetEnvOptionsForPreservedVariables()
 	toolboxPath := os.Getenv("TOOLBOX_PATH")
@@ -296,23 +234,7 @@ func ForwardToHost() (int, error) {
 	return exitCode, nil
 }
 
-// GetCgroupsVersion returns the cgroups version of the host
-//
-// Based on the IsCgroup2UnifiedMode function in:
-// https://github.com/containers/libpod/tree/master/pkg/cgroups
-func GetCgroupsVersion() (int, error) {
-	var st syscall.Statfs_t
-	if err := syscall.Statfs("/sys/fs/cgroup", &st); err != nil {
-		return -1, err
-	}
-
-	version := 1
-	if st.Type == unix.CGROUP2_SUPER_MAGIC {
-		version = 2
-	}
-
-	return version, nil
-}
+// Common functions that work on both platforms
 
 func getContainerNamePrefixForImage(image string) (string, error) {
 	basename := ImageReferenceGetBasename(image)
@@ -498,51 +420,6 @@ func GetP11KitServerSocketLock(targetUser *user.User) (string, error) {
 
 	p11KitServerSocketLock := filepath.Join(toolbxRuntimeDirectory, "pkcs11.lock")
 	return p11KitServerSocketLock, nil
-}
-
-func GetRuntimeDirectory(targetUser *user.User) (string, error) {
-	if runtimeDirectories == nil {
-		runtimeDirectories = make(map[string]string)
-	}
-
-	if toolboxRuntimeDirectory, ok := runtimeDirectories[targetUser.Uid]; ok {
-		return toolboxRuntimeDirectory, nil
-	}
-
-	gid, err := strconv.Atoi(targetUser.Gid)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert group ID to integer: %w", err)
-	}
-
-	uid, err := strconv.Atoi(targetUser.Uid)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert user ID to integer: %w", err)
-	}
-
-	var runtimeDirectory string
-
-	if uid == 0 {
-		runtimeDirectory = "/run"
-	} else {
-		runtimeDirectory = os.Getenv("XDG_RUNTIME_DIR")
-	}
-
-	toolboxRuntimeDirectory := path.Join(runtimeDirectory, "toolbox")
-	logrus.Debugf("Creating runtime directory %s", toolboxRuntimeDirectory)
-
-	if err := os.MkdirAll(toolboxRuntimeDirectory, 0700); err != nil {
-		return "", fmt.Errorf("failed to create runtime directory %s: %w", toolboxRuntimeDirectory, err)
-	}
-
-	if err := os.Chown(toolboxRuntimeDirectory, uid, gid); err != nil {
-		wrappedErr := fmt.Errorf("failed to change ownership of the runtime directory %s: %w",
-			toolboxRuntimeDirectory,
-			err)
-		return "", wrappedErr
-	}
-
-	runtimeDirectories[targetUser.Uid] = toolboxRuntimeDirectory
-	return toolboxRuntimeDirectory, nil
 }
 
 // GetSupportedDistros returns a list of supported distributions
@@ -760,14 +637,6 @@ func IsContainerNameValid(containerName string) bool {
 	}
 
 	return matched
-}
-
-func IsInsideContainer() bool {
-	return PathExists("/run/.containerenv")
-}
-
-func IsInsideToolboxContainer() bool {
-	return PathExists("/run/.toolboxenv")
 }
 
 // ResolveContainerAndImageNames takes care of standardizing names of containers and images.

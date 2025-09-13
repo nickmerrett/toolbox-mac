@@ -28,7 +28,6 @@ import (
 	"syscall"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 )
 
 // ValidateSubIDRanges provides a macOS implementation for subordinate ID validation
