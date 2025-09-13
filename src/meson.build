@@ -4,6 +4,17 @@ go_build_wrapper_program = find_program('go-build-wrapper')
 meson_generate_completions_program = find_program('meson_generate_completions.py')
 meson_go_fmt_program = find_program('meson_go_fmt.py')
 
+# Detect platform first
+cpu_family = host_machine.cpu_family()
+endian = host_machine.endian()
+build_system = host_machine.system()
+
+# Allow forcing macOS mode via environment variable for testing
+force_macos_build = get_option('force_macos_build')
+if force_macos_build
+  build_system = 'darwin'
+endif
+
 # Base sources that work on all platforms
 sources_common = files(
   'toolbox.go',
@@ -55,16 +66,6 @@ else
     'pkg/utils/utils.go',
     'pkg/utils/utils_cgo.go',
   )
-endif
-
-cpu_family = host_machine.cpu_family()
-endian = host_machine.endian()
-build_system = host_machine.system()
-
-# Allow forcing macOS mode via environment variable for testing
-force_macos_build = get_option('force_macos_build')
-if force_macos_build
-  build_system = 'darwin'
 endif
 
 dynamic_linker = ''
