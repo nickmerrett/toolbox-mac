@@ -30,12 +30,10 @@ sources_common = files(
   'cmd/list.go',
   'cmd/rm.go',
   'cmd/rmi.go',
-  'cmd/root.go',
   'cmd/rootDefault.go',
   'cmd/rootMigrationPath.go',
   'cmd/root_test.go',
   'cmd/run.go',
-  'cmd/utils.go',
   'pkg/nvidia/nvidia.go',
   'pkg/podman/container.go',
   'pkg/podman/errors.go',
@@ -59,6 +57,7 @@ if build_system == 'darwin'
   sources = sources_common + files(
     'cmd/create_darwin.go',
     'cmd/initContainer_darwin.go', 
+    'cmd/root_darwin.go',
     'cmd/utils_darwin.go',
     'pkg/term/term_darwin.go',
     'pkg/utils/utils_darwin.go',
@@ -67,6 +66,7 @@ else
   sources = sources_common + files(
     'cmd/create.go',
     'cmd/initContainer.go',
+    'cmd/root.go',
     'cmd/utils.go',
     'pkg/term/term.go',
     'pkg/term/term_test.go',
