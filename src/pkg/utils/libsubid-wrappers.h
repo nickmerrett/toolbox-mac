@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
  * Copyright © 2023 – 2024 Red Hat Inc.
  *
