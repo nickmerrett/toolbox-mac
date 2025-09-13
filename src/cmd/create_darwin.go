@@ -199,7 +199,6 @@ func createContainerWithMacOSOptions(container, image, release string) error {
 		options   string
 	}{
 		{"/Users", "/host/Users", "rslave"},
-		{"/Applications", "/host/Applications", "ro"},
 		{"/opt", "/host/opt", "rslave"},
 		{"/usr/local", "/host/usr/local", "rslave"},
 		{"/tmp", "/host/tmp", "rslave"},
