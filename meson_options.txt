@@ -47,3 +47,10 @@ option(
   description: 'Directory for system-wide tmpfiles.d(5) files',
   type: 'string',
 )
+
+option(
+  'force_macos_build',
+  description: 'Force macOS build mode for testing cross-compilation',
+  type: 'boolean',
+  value: false,
+)

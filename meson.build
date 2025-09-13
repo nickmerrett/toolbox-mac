@@ -10,19 +10,31 @@ project(
 fs = import('fs')
 
 cc = meson.get_compiler('c')
-if not cc.has_argument('-print-file-name=libc.so')
-  error('C compiler does not support the -print-file-name argument.')
-endif
 
 # Platform-specific dependencies
 host_system = host_machine.system()
+
+# Allow forcing macOS mode via environment variable for testing
+force_macos = get_option('force_macos_build')
+if force_macos
+  host_system = 'darwin'
+  message('Forcing macOS build mode via option')
+endif
+
+message('Building for system: @0@'.format(host_system))
+
 if host_system == 'darwin'
   # macOS doesn't have libsubid
   subid_dep = dependency('', required: false)
-  message('Building for macOS - skipping libsubid dependency')
+  message('macOS build: skipping libsubid dependency')
 else
   # Linux and other Unix systems
   subid_dep = cc.find_library('subid', has_headers: ['shadow/subid.h'])
+  
+  # Only check for libc.so on non-macOS systems
+  if not cc.has_argument('-print-file-name=libc.so')
+    error('C compiler does not support the -print-file-name argument.')
+  endif
 endif
 
 go = find_program('go')
