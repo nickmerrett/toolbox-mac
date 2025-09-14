@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -217,9 +218,18 @@ func createContainerWithMacOSOptions(container, image, release string) error {
 	)
 
 	// Mount the toolbox binary into the container so init-container can run
+	// Dynamically determine where the current toolbox binary is located
 	if executable, err := os.Executable(); err == nil {
-		toolboxMountArg := fmt.Sprintf("%s:/usr/local/bin/toolbox:ro", executable)
+		// Resolve symlinks to get the actual binary path
+		if resolvedExecutable, err := filepath.EvalSymlinks(executable); err == nil {
+			executable = resolvedExecutable
+		}
+		
+		logrus.Debugf("Mounting toolbox binary from %s to /usr/bin/toolbox in container", executable)
+		toolboxMountArg := fmt.Sprintf("%s:/usr/bin/toolbox:ro", executable)
 		createArgs = append(createArgs, "--volume", toolboxMountArg)
+	} else {
+		logrus.Warnf("Could not determine toolbox binary location: %v", err)
 	}
 
 	// Add the image
